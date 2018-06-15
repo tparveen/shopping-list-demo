@@ -1,18 +1,21 @@
+/* global strftime, cuid */
 'use strict';
 
-const STORE = [
-  {name: 'Bread', checked: false},
-  {name: 'Apples', checked: false},
-  {name: 'milk', checked: true},
-  {name: 'bread', checked: false}
-];
+const STORE = {
+  items: [
+    {id: cuid(), name: "apples", checked: false},
+    {id: cuid(), name: "oranges", checked: false},
+    {id: cuid(), name: "milk", checked: true},
+    {id: cuid(), name: "bread", checked: false}
+  ],
+  sortBy: 'alpha',
+};
 
 
-
-function generateItemElement(item, itemIndex) {
-    return `
-    <li class="js-item-index-element" data-item-index="${itemIndex}">
-      <span class="shopping-item js-shopping-item ${item.checked ? 'shopping-item__checked' : ''}">${item.name}</span>
+function generateItemElement(item) {
+  return `
+    <li class="js-item-index-element" data-item-id="${item.id}">
+      <span class="shopping-item js-shopping-item ${item.checked ? "shopping-item__checked" : ''}">${item.name}</span>
       <div class="shopping-item-controls">
         <button class="shopping-item-toggle js-item-toggle">
             <span class="button-label">check</span>
@@ -26,83 +29,102 @@ function generateItemElement(item, itemIndex) {
 
 
 function generateShoppingItemsString(shoppingList) {
-    console.log('Generating shopping list element');
-    const items = shoppingList.map((item, index) => generateItemElement(item, index));
-    return items.join('');
+  console.log("Generating shopping list element");
+
+  const items = shoppingList.map((item) => generateItemElement(item));
+  
+  return items.join("");
 }
 
 
 function renderShoppingList() {
-  // render the shopping list in the DOM
+    // Make a copy of STORE.items to manipulate for displaying
+    let filteredItems = [ ...STORE.items ];
+  
+    // Check STORE.sortBy to determine how to order filteredItems
+    if (STORE.sortBy === 'alpha') {
+      filteredItems.sort((a, b) => a.name > b.name);
+    } else if (STORE.sortBy === 'time') {
+      filteredItems.sort((a, b) => a.createdAt < b.createdAt);
+    }
+  
+    // render the shopping list in the DOM
     console.log('`renderShoppingList` ran');
-    const shoppingListItemsString = generateShoppingItemsString(STORE);
-  // insert that HTML into the DOM
+    // We're now generating HTML from the filteredItems and not the persistent STORE.items
+    const shoppingListItemsString = generateShoppingItemsString(filteredItems);
+  
+    // insert that HTML into the DOM
     $('.js-shopping-list').html(shoppingListItemsString);
 }
 
 
 function addItemToShoppingList(itemName) {
-    console.log(`Adding "${itemName}" to shopping list`);
-    STORE.push({name: itemName, checked: false});
+  console.log(`Adding "${itemName}" to shopping list`);
+  STORE.items.push({id: cuid(), name: itemName, checked: false, createdAt: Date.now()});
 }
 
 function handleNewItemSubmit() {
-    $('#js-shopping-list-form').submit(function(event) {
-        event.preventDefault();
-        console.log('`handleNewItemSubmit` ran');
-        const newItemName = $('.js-shopping-list-entry').val();
-        $('.js-shopping-list-entry').val('');
-        addItemToShoppingList(newItemName);
-        renderShoppingList();
-    });
+  $('#js-shopping-list-form').submit(function(event) {
+    event.preventDefault();
+    console.log('`handleNewItemSubmit` ran');
+    const newItemName = $('.js-shopping-list-entry').val();
+    $('.js-shopping-list-entry').val('');
+    addItemToShoppingList(newItemName);
+    renderShoppingList();
+  });
 }
 
-function toggleCheckedForListItem(itemIndex) {
-    console.log('Toggling checked property for item at index ' + itemIndex);
-    STORE[itemIndex].checked = !STORE[itemIndex].checked;
-}
-
-
-function getItemIndexFromElement(item) {
-    const itemIndexString = $(item)
+function getItemIdFromElement(item) {
+  return $(item)
     .closest('.js-item-index-element')
-    .attr('data-item-index');
-    return parseInt(itemIndexString, 10);
+    .data('item-id');
+}
+
+function findItemById(id) {
+  return STORE.items.find(i => i.id === id);
+}
+
+function toggleCheckedForListItem(itemId) {
+  const item = findItemById(itemId);
+  item.checked = !item.checked;
 }
 
 function handleItemCheckClicked() {
-    $('.js-shopping-list').on('click', '.js-item-toggle', event => {
-        console.log('`handleItemCheckClicked` ran');
-        const itemIndex = getItemIndexFromElement(event.currentTarget);
-        toggleCheckedForListItem(itemIndex);
-        renderShoppingList();
-    });
+  $('.js-shopping-list').on('click', `.js-item-toggle`, event => {
+    console.log('`handleItemCheckClicked` ran');
+    const itemId = getItemIdFromElement(event.currentTarget);
+    toggleCheckedForListItem(itemId);
+    renderShoppingList();
+  });
 }
 
 // name says it all. responsible for deleting a list item.
-function deleteListItem(itemIndex) {
-    console.log(`Deleting item at index  ${itemIndex} from shopping list`);
-
-  // as with `addItemToShoppingLIst`, this function also has the side effect of
-  // mutating the global STORE value.
-  //
-  // we call `.splice` at the index of the list item we want to remove, with a length
-  // of 1. this has the effect of removing the desired item, and shifting all of the
-  // elements to the right of `itemIndex` (if any) over one place to the left, so we
-  // don't have an empty space in our list.
-    STORE.splice(itemIndex, 1);
+function deleteListItem(itemId) {
+  const itemIndex = STORE.items.findIndex(i => i.id === itemId);
+  STORE.items.splice(itemIndex, 1);
 }
 
 
 function handleDeleteItemClicked() {
   // like in `handleItemCheckClicked`, we use event delegation
-    $('.js-shopping-list').on('click', '.js-item-delete', event => {
-    // get the index of the item in STORE
-        const itemIndex = getItemIndexFromElement(event.currentTarget);
+  $('.js-shopping-list').on('click', '.js-item-delete', event => {
+    const itemId = getItemIdFromElement(event.currentTarget);
     // delete the item
-        deleteListItem(itemIndex);
+    deleteListItem(itemId);
     // render the updated shopping list
-        renderShoppingList();
+    renderShoppingList();
+  });
+}
+
+function changeSortBy(sortBy) {
+  STORE.sortBy = sortBy;
+}
+
+function handleChangeSortBy() {
+    $('#js-shopping-list-sortby').change(e => {
+      const sortBy = e.target.value;
+      changeSortBy(sortBy);
+      renderShoppingList();
     });
 }
 
@@ -111,10 +133,11 @@ function handleDeleteItemClicked() {
 // that handle new item submission and user clicks on the "check" and "delete" buttons
 // for individual shopping list items.
 function handleShoppingList() {
-    renderShoppingList();
-    handleNewItemSubmit();
-    handleItemCheckClicked();
-    handleDeleteItemClicked();
+  renderShoppingList();
+  handleNewItemSubmit();
+  handleItemCheckClicked();
+  handleDeleteItemClicked();
+  handleChangeSortBy();
 }
 
 // when the page loads, call `handleShoppingList`
