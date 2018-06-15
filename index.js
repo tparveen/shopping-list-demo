@@ -10,7 +10,6 @@ const STORE = {
     sortBy: 'alpha',
 };
 
-
 function generateItemElement(item) {
     return `
     <li class="js-item-index-element" data-item-id="${item.id}">
@@ -49,7 +48,6 @@ function renderShoppingList() {
     console.log('`renderShoppingList` ran');
     // We're now generating HTML from the filteredItems and not the persistent STORE.items
     const shoppingListItemsString = generateShoppingItemsString(filteredItems);
-  
     // insert that HTML into the DOM
     $('.js-shopping-list').html(shoppingListItemsString);
 }
@@ -57,7 +55,7 @@ function renderShoppingList() {
 
 function addItemToShoppingList(itemName) {
     console.log(`Adding "${itemName}" to shopping list`);
-    STORE.items.push({id: cuid(), name: itemName, checked: false, createdAt: Date.now()});
+    STORE.items.push({id: cuid(), name: itemName, checked: false});
 }
 
 function handleNewItemSubmit() {
