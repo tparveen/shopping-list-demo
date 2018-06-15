@@ -69,6 +69,11 @@ function handleNewItemSubmit() {
     });
 }
 
+function toggleCheckedForListItem(itemId) {
+    const item = findItemById(itemId);
+    item.checked = !item.checked;
+}
+
 function getItemIdFromElement(item) {
     return $(item)
     .closest('.js-item-index-element')
@@ -77,11 +82,6 @@ function getItemIdFromElement(item) {
 
 function findItemById(id) {
     return STORE.items.find(i => i.id === id);
-}
-
-function toggleCheckedForListItem(itemId) {
-    const item = findItemById(itemId);
-    item.checked = !item.checked;
 }
 
 function handleItemCheckClicked() {
